@@ -1,0 +1,170 @@
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import { DAYS_PER_MONTH, calculate, kwhPerMonth, monthFromIndex, monthIndex, toMonthly } from '../web/js/calc.js';
+import { defaultState } from '../web/js/state.js';
+
+const close = (actual, expected, epsilon = 1e-9) =>
+  assert.ok(Math.abs(actual - expected) < epsilon, `${actual} is not close to ${expected}`);
+
+function scenario(overrides = {}) {
+  return {
+    ...defaultState(),
+    power: { watts: 0, hoursPerDay: 24, pricePerKwh: 0 },
+    ...overrides,
+  };
+}
+
+const NOW = new Date(2026, 5, 15);
+
+test('yearly amounts are converted to monthly', () => {
+  assert.equal(toMonthly(120, 'year'), 10);
+  assert.equal(toMonthly(10, 'month'), 10);
+});
+
+test('invalid or negative amounts count as zero', () => {
+  assert.equal(toMonthly(-5, 'month'), 0);
+  assert.equal(toMonthly('abc', 'month'), 0);
+  assert.equal(toMonthly(undefined, 'year'), 0);
+  assert.equal(toMonthly(Infinity, 'month'), 0);
+});
+
+test('electricity is computed from watts, hours per day and price', () => {
+  const kwh = kwhPerMonth({ watts: 100, hoursPerDay: 24 });
+  close(kwh, 0.1 * 24 * DAYS_PER_MONTH);
+  const result = calculate(scenario({ power: { watts: 100, hoursPerDay: 24, pricePerKwh: 0.2 } }), NOW);
+  close(result.electricity, kwh * 0.2);
+});
+
+test('hours per day are capped at 24', () => {
+  assert.equal(kwhPerMonth({ watts: 100, hoursPerDay: 48 }), kwhPerMonth({ watts: 100, hoursPerDay: 24 }));
+});
+
+test('gross savings add monthly and yearly services', () => {
+  const result = calculate(scenario({
+    services: [
+      { amount: 10, period: 'month' },
+      { amount: 60, period: 'year' },
+    ],
+  }), NOW);
+  close(result.gross, 15);
+  close(result.netMonthly, 15);
+  close(result.netYearly, 180);
+});
+
+test('other costs are subtracted, yearly ones are spread', () => {
+  const result = calculate(scenario({
+    services: [{ amount: 30, period: 'month' }],
+    others: [{ amount: 12, period: 'year' }, { amount: 4, period: 'month' }],
+  }), NOW);
+  close(result.other, 5);
+  close(result.netMonthly, 25);
+});
+
+test('hardware is spread over the chosen months', () => {
+  const result = calculate(scenario({
+    services: [{ amount: 50, period: 'month' }],
+    hardware: { cost: 360, months: 36, since: '' },
+  }), NOW);
+  close(result.hardware, 10);
+  close(result.netMonthly, 40);
+});
+
+test('hardware spread has a floor of one month', () => {
+  const result = calculate(scenario({ hardware: { cost: 100, months: 0, since: '' } }), NOW);
+  assert.equal(result.spreadMonths, 1);
+  close(result.hardware, 100);
+});
+
+test('the net can be negative', () => {
+  const result = calculate(scenario({
+    services: [{ amount: 5, period: 'month' }],
+    others: [{ amount: 20, period: 'month' }],
+  }), NOW);
+  close(result.netMonthly, -15);
+  close(result.netYearly, -180);
+});
+
+test('an empty state gives zeros and no payback', () => {
+  const result = calculate(scenario(), NOW);
+  assert.equal(result.netMonthly, 0);
+  assert.equal(result.payback.status, 'none');
+});
+
+test('payback without hardware cost is not applicable', () => {
+  const result = calculate(scenario({ services: [{ amount: 10, period: 'month' }] }), NOW);
+  assert.deepEqual(result.payback, { status: 'none', months: null, date: null });
+});
+
+test('payback never happens when running costs reach the savings', () => {
+  const result = calculate(scenario({
+    services: [{ amount: 10, period: 'month' }],
+    others: [{ amount: 10, period: 'month' }],
+    hardware: { cost: 300, months: 36, since: '2026-01' },
+  }), NOW);
+  assert.deepEqual(result.payback, { status: 'never', months: null, date: null });
+});
+
+test('payback months are rounded up and use savings before hardware', () => {
+  const result = calculate(scenario({
+    services: [{ amount: 40, period: 'month' }],
+    others: [{ amount: 10, period: 'month' }],
+    hardware: { cost: 310, months: 36, since: '' },
+  }), NOW);
+  assert.deepEqual(result.payback, { status: 'pending', months: 11, date: null });
+});
+
+test('an exact division does not round up', () => {
+  const result = calculate(scenario({
+    services: [{ amount: 30, period: 'month' }],
+    hardware: { cost: 300, months: 36, since: '' },
+  }), NOW);
+  assert.equal(result.payback.months, 10);
+});
+
+test('payback date counts from the purchase month', () => {
+  const result = calculate(scenario({
+    services: [{ amount: 50, period: 'month' }],
+    hardware: { cost: 600, months: 36, since: '2026-03' },
+  }), NOW);
+  assert.deepEqual(result.payback, { status: 'pending', months: 12, date: '2027-03' });
+});
+
+test('payback date crosses the year boundary', () => {
+  const result = calculate(scenario({
+    services: [{ amount: 50, period: 'month' }],
+    hardware: { cost: 250, months: 36, since: '2026-11' },
+  }), NOW);
+  assert.equal(result.payback.date, '2027-04');
+});
+
+test('payback is reached when the break-even month has passed', () => {
+  const result = calculate(scenario({
+    services: [{ amount: 50, period: 'month' }],
+    hardware: { cost: 300, months: 36, since: '2025-01' },
+  }), NOW);
+  assert.equal(result.payback.status, 'reached');
+  assert.equal(result.payback.date, '2025-07');
+});
+
+test('payback is reached in the break-even month itself', () => {
+  const result = calculate(scenario({
+    services: [{ amount: 50, period: 'month' }],
+    hardware: { cost: 300, months: 36, since: '2025-12' },
+  }), new Date(2026, 5, 1));
+  assert.equal(result.payback.status, 'reached');
+});
+
+test('an invalid purchase month is ignored', () => {
+  const result = calculate(scenario({
+    services: [{ amount: 50, period: 'month' }],
+    hardware: { cost: 300, months: 36, since: '2026-13' },
+  }), NOW);
+  assert.equal(result.payback.date, null);
+});
+
+test('month helpers round-trip', () => {
+  assert.equal(monthIndex('2026-01'), 2026 * 12);
+  assert.equal(monthIndex('2026-00'), null);
+  assert.equal(monthIndex(''), null);
+  assert.equal(monthFromIndex(monthIndex('2026-12') + 1), '2027-01');
+});
