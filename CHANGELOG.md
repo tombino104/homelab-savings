@@ -5,6 +5,11 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versio
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-11-15
+
+### Added
+- A short optional description for each service and each other cost, kept with the numbers.
+
 ## [0.1.0] - 2026-11-15
 
 ### Added

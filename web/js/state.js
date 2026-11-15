@@ -5,6 +5,7 @@ export const CURRENCIES = [
 
 const MAX_ITEMS = 100;
 const MAX_NAME = 80;
+const MAX_NOTE = 200;
 const MAX_VALUE = 1e9;
 
 export function defaultState() {
@@ -35,6 +36,7 @@ function items(list) {
     id: text(x.id) || uid(),
     ref: text(x.ref),
     name: text(x.name),
+    note: typeof x.note === 'string' ? x.note.slice(0, MAX_NOTE) : '',
     amount: amount(x.amount),
     period: x.period === 'year' ? 'year' : 'month',
   }));

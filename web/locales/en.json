@@ -36,6 +36,7 @@
   "others.empty": "No other costs.",
   "others.add": "Add a cost",
   "field.name": "Name",
+  "field.note": "Short description (optional)",
   "field.price": "Amount",
   "field.period": "Billing period",
   "period.month": "per month",

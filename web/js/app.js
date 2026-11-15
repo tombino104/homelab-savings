@@ -69,6 +69,14 @@ function row(kind, item) {
     item.name = name.value;
     saver.schedule();
   };
+  const note = el('input', {
+    type: 'text', className: 'note', value: item.note || '', maxLength: 200,
+    placeholder: t('field.note'), 'aria-label': t('field.note'),
+  });
+  note.oninput = () => {
+    item.note = note.value;
+    saver.schedule();
+  };
   const price = el('input', {
     type: 'number', min: '0', step: 'any', inputMode: 'decimal',
     value: item.amount || '', placeholder: '0', 'aria-label': t('field.price'),
@@ -85,7 +93,7 @@ function row(kind, item) {
     renderLists();
     changed();
   };
-  return el('div', { className: 'row' }, name, price, periodSelect(item), remove);
+  return el('div', { className: 'row' }, name, note, price, periodSelect(item), remove);
 }
 
 function renderLists() {
@@ -173,6 +181,7 @@ function addService(entryId) {
     id: uid(),
     ref: entry ? entry.id : '',
     name: entry ? t(`catalog.${entry.id}`) : '',
+    note: '',
     amount: entry ? entry.monthly : 0,
     period: 'month',
   });
@@ -192,7 +201,7 @@ function wireActions() {
     document.querySelectorAll('#services .name')[state.services.length - 1]?.focus();
   };
   $('#add-other').onclick = () => {
-    state.others.push({ id: uid(), ref: '', name: '', amount: 0, period: 'month' });
+    state.others.push({ id: uid(), ref: '', name: '', note: '', amount: 0, period: 'month' });
     renderLists();
     changed();
     document.querySelectorAll('#others .name')[state.others.length - 1]?.focus();

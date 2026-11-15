@@ -14,8 +14,8 @@ test('a saved state survives normalisation unchanged', () => {
   const saved = {
     v: 1,
     currency: 'USD',
-    services: [{ id: 'a', ref: 'nextcloud', name: 'Files', amount: 10, period: 'year' }],
-    others: [{ id: 'b', ref: '', name: 'Domain', amount: 12, period: 'year' }],
+    services: [{ id: 'a', ref: 'nextcloud', name: 'Files', note: 'Family photos and documents', amount: 10, period: 'year' }],
+    others: [{ id: 'b', ref: '', name: 'Domain', note: '', amount: 12, period: 'year' }],
     power: { watts: 15, hoursPerDay: 12, pricePerKwh: 0.3 },
     hardware: { cost: 250, months: 24, since: '2026-02' },
   };
@@ -55,4 +55,11 @@ test('lists are capped and names are trimmed to a safe length', () => {
 test('non-object list entries are dropped', () => {
   const state = normalize({ services: [null, 3, 'x', { name: 'ok', amount: 1 }] });
   assert.equal(state.services.length, 1);
+});
+
+test('notes are optional and capped', () => {
+  const state = normalize({ services: [{ name: 'a', amount: 1 }, { name: 'b', note: 'x'.repeat(500), amount: 1 }, { name: 'c', note: 7, amount: 1 }] });
+  assert.equal(state.services[0].note, '');
+  assert.equal(state.services[1].note.length, 200);
+  assert.equal(state.services[2].note, '');
 });

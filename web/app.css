@@ -94,8 +94,7 @@ header { margin-bottom: 20px; }
   gap: 8px;
   margin-bottom: 14px;
 }
-.row .name { grid-column: 1 / -1; }
-.row button { grid-column: 3; grid-row: 2; }
+.row .name, .row .note { grid-column: 1 / -1; }
 .empty { margin: 12px 0; }
 
 .fields {
@@ -145,8 +144,11 @@ footer { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wr
 
 @media (min-width: 560px) {
   .row { grid-template-columns: 1fr 110px 130px auto; }
-  .row .name { grid-column: auto; }
-  .row button { grid-column: auto; grid-row: auto; }
+  .row .name { grid-column: 1; grid-row: 1; }
+  .row input[type="number"] { grid-column: 2; grid-row: 1; }
+  .row select { grid-column: 3; grid-row: 1; }
+  .row button { grid-column: 4; grid-row: 1; }
+  .row .note { grid-column: 1 / -1; grid-row: 2; }
 }
 
 @media (prefers-reduced-motion: no-preference) {

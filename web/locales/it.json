@@ -36,6 +36,7 @@
   "others.empty": "Nessun altro costo.",
   "others.add": "Aggiungi un costo",
   "field.name": "Nome",
+  "field.note": "Breve descrizione (facoltativa)",
   "field.price": "Importo",
   "field.period": "Periodo di fatturazione",
   "period.month": "al mese",
