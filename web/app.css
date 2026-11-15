@@ -114,7 +114,7 @@ header { margin-bottom: 20px; }
 .row .name { font-weight: 600; }
 .row .note { color: var(--muted); font-size: 0.85rem; min-height: 28px; }
 .row .name:hover, .row .note:hover { border-color: var(--line); }
-.row:not(:focus-within) .note:placeholder-shown { display: none; }
+.row:not(:focus-within):not(:hover) .note:placeholder-shown { display: none; }
 .row input[type="number"], .row select { min-height: 40px; padding: 6px 10px; }
 .empty { margin: 12px 0 0; }
 

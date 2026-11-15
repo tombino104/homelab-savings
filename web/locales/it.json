@@ -17,7 +17,7 @@
   "payback.reached.one": "L'hardware si è ripagato intorno a {date}, dopo circa {n} mese.",
   "payback.reached.other": "L'hardware si è ripagato intorno a {date}, dopo circa {n} mesi.",
   "services.title": "Servizi che ospiti da te",
-  "services.hint": "Per ognuno, inserisci quanto costerebbe il suo equivalente cloud. I prezzi dell'elenco sono esempi approssimativi: cambiali.",
+  "services.hint": "Per ognuno, inserisci quanto costerebbe il suo equivalente cloud. I prezzi dell'elenco sono esempi approssimativi: cambiali. Tocca un nome per aggiungere una breve descrizione.",
   "services.empty": "Ancora niente. Scegli un servizio dall'elenco o aggiungine uno tuo.",
   "services.catalog": "Aggiungi dall'elenco...",
   "services.custom": "Aggiungi il tuo",
