@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="color-scheme" content="light dark">
+  <meta name="description" content="A tiny calculator for how much money your homelab saves you.">
+  <title>Homelab Savings</title>
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="app.css">
+  <script type="module" src="js/app.js"></script>
+</head>
+<body>
+  <main>
+    <header>
+      <h1 data-i18n="title">Homelab Savings</h1>
+      <p class="muted" data-i18n="tagline">What does your homelab save you?</p>
+    </header>
+
+    <div class="layout">
+    <section class="card result" aria-live="polite">
+      <p class="label" data-i18n="result.net">Net per month</p>
+      <p class="big" id="net-month">-</p>
+      <p class="muted" id="net-year">-</p>
+      <dl class="breakdown">
+        <div><dt data-i18n="result.gross">Cloud services replaced</dt><dd id="r-gross"></dd></div>
+        <div><dt data-i18n="result.electricity">Electricity</dt><dd id="r-electricity"></dd></div>
+        <div><dt id="r-hardware-label"></dt><dd id="r-hardware"></dd></div>
+        <div><dt data-i18n="result.otherCosts">Other costs</dt><dd id="r-other"></dd></div>
+      </dl>
+      <p class="payback" id="payback"></p>
+    </section>
+
+    <div class="inputs">
+    <section class="card">
+      <h2 data-i18n="services.title">Services you self-host</h2>
+      <p class="muted" data-i18n="services.hint">For each one, enter what its cloud equivalent would cost you. The prices in the list are rough examples: change them.</p>
+      <div id="services" class="rows"></div>
+      <div class="actions">
+        <select id="catalog" data-i18n-aria="services.catalog"></select>
+        <button type="button" id="add-service" data-i18n="services.custom">Add your own</button>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2 data-i18n="power.title">Electricity</h2>
+      <div class="fields">
+        <label><span data-i18n="power.watts">Average power draw (W)</span>
+          <input type="number" min="0" step="any" inputmode="decimal" data-bind="power.watts"></label>
+        <label><span data-i18n="power.hours">Hours per day</span>
+          <input type="number" min="0" max="24" step="any" inputmode="decimal" data-bind="power.hoursPerDay"></label>
+        <label><span data-i18n="power.price">Price per kWh</span>
+          <input type="number" min="0" step="any" inputmode="decimal" data-bind="power.pricePerKwh"></label>
+      </div>
+      <p class="muted" id="power-note"></p>
+    </section>
+
+    <section class="card">
+      <h2 data-i18n="hardware.title">Hardware</h2>
+      <div class="fields">
+        <label><span data-i18n="hardware.cost">What it cost</span>
+          <input type="number" min="0" step="any" inputmode="decimal" data-bind="hardware.cost"></label>
+        <label><span data-i18n="hardware.months">Spread over (months)</span>
+          <input type="number" min="1" step="1" inputmode="numeric" data-bind="hardware.months"></label>
+        <label><span data-i18n="hardware.since">Bought in (optional)</span>
+          <input type="month" data-bind="hardware.since"></label>
+      </div>
+      <p class="muted" data-i18n="hardware.hint">The purchase month is only used to estimate the break-even date.</p>
+    </section>
+
+    <section class="card">
+      <h2 data-i18n="others.title">Other costs</h2>
+      <p class="muted" data-i18n="others.hint">Domain, VPN, a faster internet plan, backups...</p>
+      <div id="others" class="rows"></div>
+      <div class="actions">
+        <button type="button" id="add-other" data-i18n="others.add">Add a cost</button>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2 data-i18n="prefs.title">Preferences</h2>
+      <div class="fields">
+        <label><span data-i18n="prefs.currency">Currency</span>
+          <select id="currency" data-bind="currency"></select></label>
+        <label><span data-i18n="prefs.language">Language</span>
+          <select id="language"></select></label>
+        <label><span data-i18n="prefs.theme">Theme</span>
+          <select id="theme">
+            <option value="system" data-i18n="prefs.theme.system">System</option>
+            <option value="light" data-i18n="prefs.theme.light">Light</option>
+            <option value="dark" data-i18n="prefs.theme.dark">Dark</option>
+          </select></label>
+      </div>
+      <p class="muted" data-i18n="prefs.currencyNote">Changing the currency does not convert your amounts.</p>
+    </section>
+    </div>
+    </div>
+
+    <footer class="muted">
+      <span data-i18n="footer.privacy">Your numbers stay on your own server.</span>
+      <span id="save-status" role="status"></span>
+    </footer>
+  </main>
+</body>
+</html>
