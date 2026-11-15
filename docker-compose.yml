@@ -1,0 +1,12 @@
+services:
+  homelab-savings:
+    image: ghcr.io/tombino104/homelab-savings:latest
+    build: .
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:47214:3000"
+    volumes:
+      - ./data:/data
+    read_only: true
+    security_opt:
+      - no-new-privileges:true
