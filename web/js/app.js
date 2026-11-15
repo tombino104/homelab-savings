@@ -93,7 +93,7 @@ function row(kind, item) {
     renderLists();
     changed();
   };
-  return el('div', { className: 'row' }, name, note, price, periodSelect(item), remove);
+  return el('div', { className: 'row' }, el('div', { className: 'title' }, name, note), price, periodSelect(item), remove);
 }
 
 function renderLists() {

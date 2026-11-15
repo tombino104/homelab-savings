@@ -87,15 +87,36 @@ header { margin-bottom: 20px; }
 .breakdown dd { margin: 0; font-variant-numeric: tabular-nums; text-align: right; }
 .payback { margin-top: 14px; }
 
-.rows { margin-top: 12px; }
+.rows {
+  margin-top: 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+.rows:has(> .empty) { border: 0; }
 .row {
   display: grid;
-  grid-template-columns: 1fr 1fr auto;
-  gap: 8px;
-  margin-bottom: 14px;
+  grid-template-columns: 1fr 1fr 40px;
+  align-items: center;
+  gap: 4px 8px;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--line);
 }
-.row .name, .row .note { grid-column: 1 / -1; }
-.empty { margin: 12px 0; }
+.row:last-child { border-bottom: 0; }
+.row .title { grid-column: 1 / 3; grid-row: 1; display: grid; }
+.row button { grid-column: 3; grid-row: 1; width: 40px; min-height: 40px; padding: 0; }
+.row .name, .row .note {
+  background: transparent;
+  border-color: transparent;
+  border-radius: 6px;
+  padding: 4px 6px;
+  min-height: 34px;
+}
+.row .name { font-weight: 600; }
+.row .note { color: var(--muted); font-size: 0.85rem; min-height: 28px; }
+.row .name:hover, .row .note:hover { border-color: var(--line); }
+.row:not(:focus-within) .note:placeholder-shown { display: none; }
+.row input[type="number"], .row select { min-height: 40px; padding: 6px 10px; }
+.empty { margin: 12px 0 0; }
 
 .fields {
   display: grid;
@@ -122,7 +143,7 @@ input:focus-visible, select:focus-visible, button:focus-visible {
 }
 
 button { cursor: pointer; width: auto; }
-button.icon { width: 44px; padding: 0; font-size: 1.3rem; line-height: 1; }
+button.icon { width: 40px; padding: 0; font-size: 1.3rem; line-height: 1; }
 button:hover { border-color: var(--accent); }
 
 .actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
@@ -143,12 +164,9 @@ footer { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wr
 }
 
 @media (min-width: 560px) {
-  .row { grid-template-columns: 1fr 110px 130px auto; }
-  .row .name { grid-column: 1; grid-row: 1; }
-  .row input[type="number"] { grid-column: 2; grid-row: 1; }
-  .row select { grid-column: 3; grid-row: 1; }
-  .row button { grid-column: 4; grid-row: 1; }
-  .row .note { grid-column: 1 / -1; grid-row: 2; }
+  .row { grid-template-columns: 1fr 110px 130px 40px; }
+  .row .title { grid-column: 1; grid-row: auto; }
+  .row button { grid-column: auto; grid-row: auto; }
 }
 
 @media (prefers-reduced-motion: no-preference) {
