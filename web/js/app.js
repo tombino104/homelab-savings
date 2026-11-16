@@ -1,4 +1,5 @@
-import { calculate } from './calc.js';
+import { calculate, chartHorizon, projection } from './calc.js';
+import { drawChart } from './chart.js';
 import { CATALOG } from './catalog.js';
 import { CURRENCIES, defaultState, normalize, uid } from './state.js';
 import { createSaver, loadPrefs, loadState, savePrefs } from './storage.js';
@@ -141,6 +142,44 @@ function render() {
     cost: money(result.electricity),
   });
   $('#payback').textContent = paybackText(result.payback);
+  renderTotal(result, money);
+  renderOverTime(result, money);
+}
+
+function renderTotal({ total }, money) {
+  const { status, months, amount } = total;
+  $('#total-amount').textContent = status === 'running' ? money(amount) : '-';
+  $('#total-note').textContent = status === 'running'
+    ? i18n.plural('total.running', months)
+    : t(status === 'future' ? 'total.future' : 'total.unknown');
+}
+
+function renderOverTime(result, money) {
+  const { netBeforeHardware, hardwareCost } = result;
+  const card = $('#over-time');
+  const empty = netBeforeHardware === 0 && hardwareCost === 0;
+  card.hidden = empty;
+  if (empty) return;
+
+  const elapsed = result.total.status === 'running' ? result.total.months : null;
+  const horizon = chartHorizon(result, elapsed);
+  drawChart($('#chart'), {
+    netBeforeHardware,
+    hardwareCost,
+    elapsed,
+    horizon,
+    breakEven: result.payback.months,
+    label: t('chart.label'),
+    text: {
+      now: t('chart.now'),
+      breakEven: t('chart.zero'),
+      end: `${horizon} ${t('chart.months')}`,
+    },
+  });
+
+  $('#projection').replaceChildren(...[1, 3, 5].map((years) => el('div', {},
+    el('dt', {}, i18n.plural('projection', years)),
+    el('dd', {}, money(projection(years, netBeforeHardware, hardwareCost))))));
 }
 
 function paybackText({ status, months, date }) {
@@ -187,7 +226,47 @@ function addService(entryId) {
   });
 }
 
+function backupStatus(message) {
+  $('#backup-status').textContent = message;
+}
+
+function wireBackup() {
+  $('#export').onclick = () => {
+    const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
+    const link = el('a', {
+      href: URL.createObjectURL(blob),
+      download: `homelab-savings-${new Date().toISOString().slice(0, 10)}.json`,
+    });
+    link.click();
+    URL.revokeObjectURL(link.href);
+  };
+  $('#import').onclick = () => $('#import-file').click();
+  $('#import-file').onchange = async (event) => {
+    const [file] = event.target.files;
+    event.target.value = '';
+    if (!file) return;
+    let raw;
+    try {
+      raw = JSON.parse(await file.text());
+    } catch {
+      raw = null;
+    }
+    if (!raw || typeof raw !== 'object' || Array.isArray(raw) || raw.v !== 1) {
+      backupStatus(t('backup.invalid'));
+      return;
+    }
+    if (!confirm(t('backup.confirm'))) return;
+    state = normalize(raw);
+    bindInputs();
+    renderCurrencies();
+    renderLists();
+    changed();
+    backupStatus(t('backup.restored'));
+  };
+}
+
 function wireActions() {
+  wireBackup();
   $('#catalog').onchange = (event) => {
     if (!event.target.value) return;
     addService(event.target.value);

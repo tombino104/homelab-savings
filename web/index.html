@@ -29,9 +29,21 @@
         <div><dt data-i18n="result.otherCosts">Other costs</dt><dd id="r-other"></dd></div>
       </dl>
       <p class="payback" id="payback"></p>
+      <div class="total">
+        <p class="label" data-i18n="total.label">Saved so far</p>
+        <p class="mid" id="total-amount">-</p>
+        <p class="muted" id="total-note"></p>
+      </div>
     </section>
 
     <div class="inputs">
+    <section class="card" id="over-time">
+      <h2 data-i18n="chart.title">Over time</h2>
+      <p class="muted" data-i18n="chart.hint">Money kept since the start, after paying for the hardware. It assumes today's numbers held the whole time.</p>
+      <div id="chart" class="chart" role="img"></div>
+      <dl class="projection" id="projection"></dl>
+    </section>
+
     <section class="card">
       <h2 data-i18n="services.title">Services you self-host</h2>
       <p class="muted" data-i18n="services.hint">For each one, enter what its cloud equivalent would cost you. The prices in the list are rough examples: change them. Tap a name to add a short description.</p>
@@ -62,10 +74,10 @@
           <input type="number" min="0" step="any" inputmode="decimal" data-bind="hardware.cost"></label>
         <label><span data-i18n="hardware.months">Spread over (months)</span>
           <input type="number" min="1" step="1" inputmode="numeric" data-bind="hardware.months"></label>
-        <label><span data-i18n="hardware.since">Bought in (optional)</span>
+        <label><span data-i18n="hardware.since">Running since (optional)</span>
           <input type="month" data-bind="hardware.since"></label>
       </div>
-      <p class="muted" data-i18n="hardware.hint">The purchase month is only used to estimate the break-even date.</p>
+      <p class="muted" data-i18n="hardware.hint">The month you started is used for the break-even date and for the total saved so far.</p>
     </section>
 
     <section class="card">
@@ -92,6 +104,17 @@
           </select></label>
       </div>
       <p class="muted" data-i18n="prefs.currencyNote">Changing the currency does not convert your amounts.</p>
+    </section>
+
+    <section class="card">
+      <h2 data-i18n="backup.title">Backup</h2>
+      <p class="muted" data-i18n="backup.hint">Save your numbers to a file, or load them back from one.</p>
+      <div class="actions">
+        <button type="button" id="export" data-i18n="backup.export">Download backup</button>
+        <button type="button" id="import" data-i18n="backup.import">Restore from file</button>
+        <input type="file" id="import-file" accept="application/json,.json" hidden>
+      </div>
+      <p class="muted" id="backup-status" role="status"></p>
     </section>
     </div>
     </div>

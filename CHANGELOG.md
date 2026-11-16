@@ -5,6 +5,16 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versio
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-11-16
+
+### Added
+- The total saved so far: the monthly savings since the month you started, minus the whole hardware cost. It starts below zero and crosses zero at the break-even.
+- An "Over time" chart of that total, with today and the break-even marked, and what you will have saved after 1, 3 and 5 years.
+- Backup: download your numbers as a JSON file and restore them from one.
+
+### Changed
+- "Bought in" is now "Running since": the same month is used for the break-even date and for the total saved so far.
+
 ## [0.2.0] - 2026-11-15
 
 ### Added

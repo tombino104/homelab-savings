@@ -25,7 +25,8 @@ One small container, no accounts, no cloud, no tracking.
 
 - You list the services you self-host and what their cloud equivalent would cost (monthly or yearly). A small catalog of common services comes with rough example prices: they are only a starting point, edit them.
 - You enter the electricity (watts, hours per day, price per kWh), what the hardware cost and over how many months to spread it, and any other cost (domain, VPN, a faster internet plan...).
-- You get the net result per month and per year, the breakdown, and the month the hardware pays for itself.
+- You get the net result per month and per year, the breakdown, the month the hardware pays for itself, how much you have saved so far (hardware included), a chart of it over time and what it will be after 1, 3 and 5 years.
+- You can download your numbers as a JSON backup and restore them later.
 
 It is a calculator, not a score: no goals, no colours for good or bad, no notifications.
 
@@ -59,9 +60,10 @@ net per month     = gross savings - electricity - hardware - other costs
 net per year      = net per month x 12
 
 break-even        = hardware cost / (gross savings - electricity - other costs), rounded up to whole months
+saved so far      = whole months since the start x (gross savings - electricity - other costs) - hardware cost
 ```
 
-The break-even date is the purchase month plus those months. If the running costs are at least as high as the savings, there is no break-even. Amounts are never converted between currencies.
+The break-even date is the month you started plus those months. The total saved so far assumes today's numbers held the whole time and counts whole months. If the running costs are at least as high as the savings, there is no break-even. Amounts are never converted between currencies.
 
 ## Develop
 

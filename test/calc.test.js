@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { DAYS_PER_MONTH, calculate, kwhPerMonth, monthFromIndex, monthIndex, toMonthly } from '../web/js/calc.js';
+import { DAYS_PER_MONTH, calculate, chartHorizon, kwhPerMonth, projection, monthFromIndex, monthIndex, toMonthly } from '../web/js/calc.js';
 import { defaultState } from '../web/js/state.js';
 
 const close = (actual, expected, epsilon = 1e-9) =>
@@ -167,4 +167,64 @@ test('month helpers round-trip', () => {
   assert.equal(monthIndex('2026-00'), null);
   assert.equal(monthIndex(''), null);
   assert.equal(monthFromIndex(monthIndex('2026-12') + 1), '2027-01');
+});
+
+test('total saved is the monthly savings since the start minus the hardware', () => {
+  const result = calculate(scenario({
+    services: [{ amount: 50, period: 'month' }],
+    hardware: { cost: 300, months: 36, since: '2026-01' },
+  }), NOW);
+  assert.equal(result.total.status, 'running');
+  assert.equal(result.total.months, 5);
+  close(result.total.amount, 5 * 50 - 300);
+});
+
+test('total saved is the whole hardware cost in the negative in the first month', () => {
+  const result = calculate(scenario({
+    services: [{ amount: 50, period: 'month' }],
+    hardware: { cost: 300, months: 36, since: '2026-06' },
+  }), NOW);
+  close(result.total.amount, -300);
+});
+
+test('total saved crosses zero in the break-even month', () => {
+  const result = calculate(scenario({
+    services: [{ amount: 50, period: 'month' }],
+    hardware: { cost: 300, months: 36, since: '2025-12' },
+  }), NOW);
+  assert.equal(result.payback.status, 'reached');
+  assert.ok(result.total.amount >= 0);
+});
+
+test('total saved needs a start month', () => {
+  const result = calculate(scenario({ services: [{ amount: 50, period: 'month' }] }), NOW);
+  assert.deepEqual(result.total, { status: 'unknown', months: null, amount: null });
+});
+
+test('a start month in the future has no total yet', () => {
+  const result = calculate(scenario({ hardware: { cost: 0, months: 36, since: '2027-01' } }), NOW);
+  assert.equal(result.total.status, 'future');
+});
+
+test('total saved can go down when costs exceed savings', () => {
+  const result = calculate(scenario({
+    services: [{ amount: 5, period: 'month' }],
+    others: [{ amount: 15, period: 'month' }],
+    hardware: { cost: 0, months: 36, since: '2026-01' },
+  }), NOW);
+  close(result.total.amount, -50);
+});
+
+test('projections count from the start of the setup', () => {
+  close(projection(1, 40, 300), 180);
+  close(projection(5, 40, 300), 2100);
+});
+
+test('the chart covers at least a year and the break-even', () => {
+  const result = calculate(scenario({
+    services: [{ amount: 10, period: 'month' }],
+    hardware: { cost: 1000, months: 36, since: '' },
+  }), NOW);
+  assert.equal(chartHorizon(result, 0), 120);
+  assert.equal(chartHorizon(calculate(scenario(), NOW), 0), 12);
 });

@@ -54,8 +54,38 @@ export function calculate(state, now = new Date()) {
     spreadMonths,
     netMonthly: net,
     netYearly: net * 12,
+    netBeforeHardware,
+    hardwareCost,
     payback: payback(hardwareCost, netBeforeHardware, state.hardware?.since, now),
+    total: total(hardwareCost, netBeforeHardware, state.hardware?.since, now),
   };
+}
+
+// Money kept so far: what the setup saved each month since it started, minus the
+// whole hardware cost. It assumes today's numbers held the whole time, and counts
+// whole months, like the break-even date does.
+export function cumulative(months, netBeforeHardware, hardwareCost) {
+  return months * netBeforeHardware - hardwareCost;
+}
+
+function total(hardwareCost, netBeforeHardware, since, now) {
+  const start = monthIndex(since);
+  if (start === null) return { status: 'unknown', months: null, amount: null };
+  const current = now.getFullYear() * 12 + now.getMonth();
+  if (current < start) return { status: 'future', months: 0, amount: null };
+  const months = current - start;
+  return { status: 'running', months, amount: cumulative(months, netBeforeHardware, hardwareCost) };
+}
+
+export function projection(years, netBeforeHardware, hardwareCost) {
+  return cumulative(years * 12, netBeforeHardware, hardwareCost);
+}
+
+// Points of the cumulative curve, month 0 to `horizon`, for the chart.
+export function chartHorizon(result, elapsed) {
+  const wanted = [12, Math.ceil((elapsed || 0) * 1.5)];
+  if (result.payback.months) wanted.push(Math.ceil(result.payback.months * 1.25));
+  return Math.min(120, Math.max(...wanted));
 }
 
 function payback(hardwareCost, netBeforeHardware, since, now) {

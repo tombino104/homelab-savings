@@ -172,3 +172,28 @@ footer { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wr
 @media (prefers-reduced-motion: no-preference) {
   button, input, select { transition: border-color 0.15s; }
 }
+
+.total { margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--line); }
+.total .label { color: var(--muted); font-size: 0.9rem; }
+.total .mid {
+  font-size: clamp(1.5rem, 6vw, 1.9rem);
+  font-weight: 700;
+  line-height: 1.2;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+
+.chart { margin-top: 12px; }
+.chart svg { display: block; width: 100%; height: auto; overflow: visible; }
+.chart .axis { stroke: var(--line); stroke-width: 1; }
+.chart .past, .chart .future { fill: none; stroke: var(--accent); stroke-width: 2.5; stroke-linejoin: round; stroke-linecap: round; }
+.chart .future { stroke-dasharray: 2 6; }
+.chart .now { stroke: var(--muted); stroke-width: 1; stroke-dasharray: 3 3; }
+.chart .dot { fill: var(--accent); }
+.chart .zero { fill: var(--surface); stroke: var(--muted); stroke-width: 1.5; }
+.chart .tick { fill: var(--muted); font-size: 10px; }
+
+.projection { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 8px; margin: 12px 0 0; }
+.projection div { border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; }
+.projection dt { color: var(--muted); font-size: 0.85rem; }
+.projection dd { margin: 0; font-weight: 600; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
