@@ -18,6 +18,7 @@ One small container, no accounts, no cloud, no tracking.
 | | |
 | --- | --- |
 | ![Light theme on a computer](docs/screenshots/home.png) | ![Dark theme on a computer](docs/screenshots/home-dark.png) |
+| ![The list of services, each counted from the month it was added](docs/screenshots/services.png) | ![On a phone](docs/screenshots/phone.png) |
 
 *Made-up example numbers.*
 
