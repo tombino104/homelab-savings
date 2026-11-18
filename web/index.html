@@ -17,106 +17,130 @@
       <p class="muted" data-i18n="tagline">What does your homelab save you?</p>
     </header>
 
-    <div class="layout">
-    <section class="card result" aria-live="polite">
-      <p class="label" data-i18n="result.net">Net per month</p>
-      <p class="big" id="net-month">-</p>
-      <p class="muted" id="net-year">-</p>
-      <dl class="breakdown">
-        <div><dt data-i18n="result.gross">Cloud services replaced</dt><dd id="r-gross"></dd></div>
-        <div><dt data-i18n="result.electricity">Electricity</dt><dd id="r-electricity"></dd></div>
-        <div><dt id="r-hardware-label"></dt><dd id="r-hardware"></dd></div>
-        <div><dt data-i18n="result.otherCosts">Other costs</dt><dd id="r-other"></dd></div>
-      </dl>
-      <p class="payback" id="payback"></p>
-      <div class="total">
-        <p class="label" data-i18n="total.label">Saved so far</p>
-        <p class="mid" id="total-amount">-</p>
-        <p class="muted" id="total-note"></p>
+    <div class="topbar">
+      <div class="summary" aria-live="polite">
+        <div><span class="label" data-i18n="result.net">Net per month</span><strong id="sum-net">-</strong></div>
+        <div><span class="label" data-i18n="total.label">Saved so far</span><strong id="sum-total">-</strong></div>
       </div>
-    </section>
-
-    <div class="inputs">
-    <section class="card" id="over-time">
-      <h2 data-i18n="chart.title">Over time</h2>
-      <p class="muted" data-i18n="chart.hint">Money kept since the start, after paying for the hardware. It assumes today's numbers held the whole time.</p>
-      <div id="chart" class="chart" role="img"></div>
-      <dl class="projection" id="projection"></dl>
-    </section>
-
-    <section class="card">
-      <h2 data-i18n="services.title">Services you self-host</h2>
-      <p class="muted" data-i18n="services.hint">For each one, enter what its cloud equivalent would cost you. The prices in the list are rough examples: change them. Tap a name to add a short description.</p>
-      <div class="actions">
-        <select id="catalog" data-i18n-aria="services.catalog"></select>
-        <button type="button" id="add-service" data-i18n="services.custom">Add your own</button>
-      </div>
-      <div id="services" class="rows"></div>
-    </section>
-
-    <section class="card">
-      <h2 data-i18n="power.title">Electricity</h2>
-      <div class="fields">
-        <label><span data-i18n="power.watts">Average power draw (W)</span>
-          <input type="number" min="0" step="any" inputmode="decimal" data-bind="power.watts"></label>
-        <label><span data-i18n="power.hours">Hours per day</span>
-          <input type="number" min="0" max="24" step="any" inputmode="decimal" data-bind="power.hoursPerDay"></label>
-        <label><span data-i18n="power.price">Price per kWh</span>
-          <input type="number" min="0" step="any" inputmode="decimal" data-bind="power.pricePerKwh"></label>
-      </div>
-      <p class="muted" id="power-note"></p>
-    </section>
-
-    <section class="card">
-      <h2 data-i18n="hardware.title">Hardware</h2>
-      <div class="fields">
-        <label><span data-i18n="hardware.cost">What it cost</span>
-          <input type="number" min="0" step="any" inputmode="decimal" data-bind="hardware.cost"></label>
-        <label><span data-i18n="hardware.months">Spread over (months)</span>
-          <input type="number" min="1" step="1" inputmode="numeric" data-bind="hardware.months"></label>
-        <label><span data-i18n="hardware.since">Running since (optional)</span>
-          <input type="month" data-bind="hardware.since"></label>
-      </div>
-      <p class="muted" data-i18n="hardware.hint">The month you started is used for the break-even date and for the total saved so far.</p>
-    </section>
-
-    <section class="card">
-      <h2 data-i18n="others.title">Other costs</h2>
-      <p class="muted" data-i18n="others.hint">Domain, VPN, a faster internet plan, backups...</p>
-      <div class="actions">
-        <button type="button" id="add-other" data-i18n="others.add">Add a cost</button>
-      </div>
-      <div id="others" class="rows"></div>
-    </section>
-
-    <section class="card">
-      <h2 data-i18n="prefs.title">Preferences</h2>
-      <div class="fields">
-        <label><span data-i18n="prefs.currency">Currency</span>
-          <select id="currency" data-bind="currency"></select></label>
-        <label><span data-i18n="prefs.language">Language</span>
-          <select id="language"></select></label>
-        <label><span data-i18n="prefs.theme">Theme</span>
-          <select id="theme">
-            <option value="system" data-i18n="prefs.theme.system">System</option>
-            <option value="light" data-i18n="prefs.theme.light">Light</option>
-            <option value="dark" data-i18n="prefs.theme.dark">Dark</option>
-          </select></label>
-      </div>
-      <p class="muted" data-i18n="prefs.currencyNote">Changing the currency does not convert your amounts.</p>
-    </section>
-
-    <section class="card">
-      <h2 data-i18n="backup.title">Backup</h2>
-      <p class="muted" data-i18n="backup.hint">Save your numbers to a file, or load them back from one.</p>
-      <div class="actions">
-        <button type="button" id="export" data-i18n="backup.export">Download backup</button>
-        <button type="button" id="import" data-i18n="backup.import">Restore from file</button>
-        <input type="file" id="import-file" accept="application/json,.json" hidden>
-      </div>
-      <p class="muted" id="backup-status" role="status"></p>
-    </section>
+      <nav class="tabs" role="tablist" data-i18n-aria="tabs.label">
+        <button type="button" role="tab" data-tab="summary" data-i18n="tab.summary">Summary</button>
+        <button type="button" role="tab" data-tab="services"><span data-i18n="tab.services">Services</span> <span class="count" id="services-count"></span></button>
+        <button type="button" role="tab" data-tab="costs" data-i18n="tab.costs">Costs</button>
+        <button type="button" role="tab" data-tab="settings" data-i18n="tab.settings">Settings</button>
+      </nav>
     </div>
+
+    <div class="panel two" role="tabpanel" data-panel="summary">
+      <section class="card result">
+        <p class="label" data-i18n="result.net">Net per month</p>
+        <p class="big" id="net-month">-</p>
+        <p class="muted" id="net-year">-</p>
+        <dl class="breakdown">
+          <div><dt data-i18n="result.gross">Cloud services replaced</dt><dd id="r-gross"></dd></div>
+          <div><dt data-i18n="result.electricity">Electricity</dt><dd id="r-electricity"></dd></div>
+          <div><dt id="r-hardware-label"></dt><dd id="r-hardware"></dd></div>
+          <div><dt data-i18n="result.otherCosts">Other costs</dt><dd id="r-other"></dd></div>
+        </dl>
+        <p class="payback" id="payback"></p>
+        <div class="total">
+          <p class="label" data-i18n="total.label">Saved so far</p>
+          <p class="mid" id="total-amount">-</p>
+          <p class="muted" id="total-note"></p>
+        </div>
+      </section>
+
+      <section class="card" id="over-time">
+        <h2 data-i18n="chart.title">Over time</h2>
+        <p class="muted" data-i18n="chart.hint">Money kept since the start, after paying for the hardware. Each service counts from the month you started using it.</p>
+        <div id="chart" class="chart"></div>
+        <dl class="projection" id="projection"></dl>
+      </section>
+    </div>
+
+    <div class="panel" role="tabpanel" data-panel="services" hidden>
+      <section class="card">
+        <div class="head">
+          <h2 data-i18n="services.title">Services you self-host</h2>
+          <p class="muted" id="services-summary"></p>
+        </div>
+        <p class="muted" data-i18n="services.hint">For each one, enter what its cloud equivalent would cost you.</p>
+        <div class="actions">
+          <select id="catalog" data-i18n-aria="services.catalog"></select>
+          <button type="button" id="add-service" data-i18n="services.custom">Add your own</button>
+        </div>
+        <input type="search" id="services-search" class="search" data-i18n-placeholder="services.search" data-i18n-aria="services.search" hidden>
+        <div id="services" class="list"></div>
+      </section>
+    </div>
+
+    <div class="panel" role="tabpanel" data-panel="costs" hidden>
+      <section class="card">
+        <h2 data-i18n="power.title">Electricity</h2>
+        <div class="fields">
+          <label><span data-i18n="power.watts">Average power draw (W)</span>
+            <input type="number" min="0" step="any" inputmode="decimal" data-bind="power.watts"></label>
+          <label><span data-i18n="power.hours">Hours per day</span>
+            <input type="number" min="0" max="24" step="any" inputmode="decimal" data-bind="power.hoursPerDay"></label>
+          <label><span data-i18n="power.price">Price per kWh</span>
+            <input type="number" min="0" step="any" inputmode="decimal" data-bind="power.pricePerKwh"></label>
+        </div>
+        <p class="muted" id="power-note"></p>
+      </section>
+
+      <section class="card">
+        <h2 data-i18n="hardware.title">Hardware</h2>
+        <div class="fields">
+          <label><span data-i18n="hardware.cost">What it cost</span>
+            <input type="number" min="0" step="any" inputmode="decimal" data-bind="hardware.cost"></label>
+          <label><span data-i18n="hardware.months">Spread over (months)</span>
+            <input type="number" min="1" step="1" inputmode="numeric" data-bind="hardware.months"></label>
+          <label><span data-i18n="hardware.since">Running since (optional)</span>
+            <input type="month" data-bind="hardware.since"></label>
+        </div>
+        <p class="muted" data-i18n="hardware.hint">The month you started is used for the break-even date and for the total saved so far.</p>
+      </section>
+
+      <section class="card">
+        <div class="head">
+          <h2 data-i18n="others.title">Other costs</h2>
+          <p class="muted" id="others-summary"></p>
+        </div>
+        <p class="muted" data-i18n="others.hint">Domain, VPN, a faster internet plan, backups...</p>
+        <div class="actions">
+          <button type="button" id="add-other" data-i18n="others.add">Add a cost</button>
+        </div>
+        <div id="others" class="list"></div>
+      </section>
+    </div>
+
+    <div class="panel" role="tabpanel" data-panel="settings" hidden>
+      <section class="card">
+        <h2 data-i18n="prefs.title">Preferences</h2>
+        <div class="fields">
+          <label><span data-i18n="prefs.currency">Currency</span>
+            <select id="currency" data-bind="currency"></select></label>
+          <label><span data-i18n="prefs.language">Language</span>
+            <select id="language"></select></label>
+          <label><span data-i18n="prefs.theme">Theme</span>
+            <select id="theme">
+              <option value="system" data-i18n="prefs.theme.system">System</option>
+              <option value="light" data-i18n="prefs.theme.light">Light</option>
+              <option value="dark" data-i18n="prefs.theme.dark">Dark</option>
+            </select></label>
+        </div>
+        <p class="muted" data-i18n="prefs.currencyNote">Changing the currency does not convert your amounts.</p>
+      </section>
+
+      <section class="card">
+        <h2 data-i18n="backup.title">Backup</h2>
+        <p class="muted" data-i18n="backup.hint">Save your numbers to a file, or load them back from one.</p>
+        <div class="actions">
+          <button type="button" id="export" data-i18n="backup.export">Download backup</button>
+          <button type="button" id="import" data-i18n="backup.import">Restore from file</button>
+          <input type="file" id="import-file" accept="application/json,.json" hidden>
+        </div>
+        <p class="muted" id="backup-status" role="status"></p>
+      </section>
     </div>
 
     <footer class="muted">

@@ -216,8 +216,81 @@ test('total saved can go down when costs exceed savings', () => {
 });
 
 test('projections count from the start of the setup', () => {
-  close(projection(1, 40, 300), 180);
-  close(projection(5, 40, 300), 2100);
+  const result = calculate(scenario({
+    services: [{ amount: 40, period: 'month' }],
+    hardware: { cost: 300, months: 36, since: '2026-01' },
+  }), NOW);
+  close(projection(1, result.timeline), 180);
+  close(projection(5, result.timeline), 2100);
+});
+
+test('a service added later counts only from the month it was added', () => {
+  const result = calculate(scenario({
+    services: [
+      { amount: 50, period: 'month' },
+      { amount: 10, period: 'month', since: '2026-04' },
+    ],
+    hardware: { cost: 0, months: 36, since: '2026-01' },
+  }), NOW);
+  // January to May: 5 months of the first, April and May of the second.
+  close(result.total.amount, 5 * 50 + 2 * 10);
+  close(result.gross, 60);
+});
+
+test('a service that ended stops counting and is not in the monthly numbers', () => {
+  const result = calculate(scenario({
+    services: [
+      { amount: 50, period: 'month' },
+      { amount: 20, period: 'month', until: '2026-02' },
+    ],
+    hardware: { cost: 0, months: 36, since: '2026-01' },
+  }), NOW);
+  // The second one counted in January and February only.
+  close(result.total.amount, 5 * 50 + 2 * 20);
+  close(result.gross, 50);
+});
+
+test('a service starting in the future does not count yet', () => {
+  const result = calculate(scenario({
+    services: [{ amount: 50, period: 'month' }, { amount: 30, period: 'month', since: '2026-09' }],
+    hardware: { cost: 0, months: 36, since: '2026-01' },
+  }), NOW);
+  close(result.gross, 50);
+  close(result.total.amount, 250);
+});
+
+test('costs added later are subtracted only from then', () => {
+  const result = calculate(scenario({
+    services: [{ amount: 50, period: 'month' }],
+    others: [{ amount: 120, period: 'year', since: '2026-05' }],
+    hardware: { cost: 0, months: 36, since: '2026-01' },
+  }), NOW);
+  close(result.total.amount, 5 * 50 - 1 * 10);
+});
+
+test('a service dated before the start counts from the start', () => {
+  const result = calculate(scenario({
+    services: [{ amount: 50, period: 'month', since: '2020-01' }],
+    hardware: { cost: 0, months: 36, since: '2026-01' },
+  }), NOW);
+  close(result.total.amount, 250);
+});
+
+test('without a start month the earliest dated item is the start', () => {
+  const result = calculate(scenario({
+    services: [{ amount: 50, period: 'month', since: '2026-03' }, { amount: 10, period: 'month', since: '2026-05' }],
+  }), NOW);
+  assert.equal(result.total.months, 3);
+  close(result.total.amount, 3 * 50 + 1 * 10);
+});
+
+test('the break-even follows the services as they were added', () => {
+  const result = calculate(scenario({
+    services: [{ amount: 10, period: 'month' }, { amount: 90, period: 'month', since: '2026-03' }],
+    hardware: { cost: 300, months: 36, since: '2026-01' },
+  }), NOW);
+  // 10 + 10 + 100 + 100 + 100 = 320 >= 300 after 5 months: June 2026.
+  assert.deepEqual(result.payback, { status: 'reached', months: 5, date: '2026-06' });
 });
 
 test('the chart covers at least a year and the break-even', () => {

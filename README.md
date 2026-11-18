@@ -23,7 +23,7 @@ One small container, no accounts, no cloud, no tracking.
 
 ## What it does
 
-- You list the services you self-host and what their cloud equivalent would cost (monthly or yearly). A small catalog of common services comes with rough example prices: they are only a starting point, edit them.
+- You list the services you self-host and what their cloud equivalent would cost (monthly or yearly), and from which month (a new one starts in the month you add it) and, if you stopped, until which month. A small catalog of common services comes with rough example prices: they are only a starting point, edit them.
 - You enter the electricity (watts, hours per day, price per kWh), what the hardware cost and over how many months to spread it, and any other cost (domain, VPN, a faster internet plan...).
 - You get the net result per month and per year, the breakdown, the month the hardware pays for itself, how much you have saved so far (hardware included), a chart of it over time and what it will be after 1, 3 and 5 years.
 - You can download your numbers as a JSON backup and restore them later.
@@ -60,10 +60,12 @@ net per month     = gross savings - electricity - hardware - other costs
 net per year      = net per month x 12
 
 break-even        = hardware cost / (gross savings - electricity - other costs), rounded up to whole months
-saved so far      = whole months since the start x (gross savings - electricity - other costs) - hardware cost
+saved so far      = for each service, its monthly price x the months it was in use
+                    - for each other cost, its monthly price x the months it was paid
+                    - electricity x months since the start - hardware cost
 ```
 
-The break-even date is the month you started plus those months. The total saved so far assumes today's numbers held the whole time and counts whole months. If the running costs are at least as high as the savings, there is no break-even. Amounts are never converted between currencies.
+The break-even date is the month you started plus those months; once a start month is set, it is the first month the total saved so far reaches zero, following when each service was added. The totals count whole months and use today's prices for the whole time. If the running costs are at least as high as the savings, there is no break-even. Amounts are never converted between currencies.
 
 ## Develop
 

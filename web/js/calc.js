@@ -1,4 +1,5 @@
 export const DAYS_PER_MONTH = 365.25 / 12;
+const MAX_MONTHS = 1200;
 
 const positive = (value) => {
   const n = Number(value);
@@ -8,10 +9,6 @@ const positive = (value) => {
 export function toMonthly(amount, period) {
   const value = positive(amount);
   return period === 'year' ? value / 12 : value;
-}
-
-function sumMonthly(items) {
-  return (items || []).reduce((total, item) => total + toMonthly(item.amount, item.period), 0);
 }
 
 export function monthIndex(value) {
@@ -25,17 +22,89 @@ export function monthFromIndex(index) {
   return `${String(year).padStart(4, '0')}-${String(month).padStart(2, '0')}`;
 }
 
+export function currentMonth(now = new Date()) {
+  return monthFromIndex(now.getFullYear() * 12 + now.getMonth());
+}
+
+// An item counts in a month when it has started (no start month: since the
+// beginning) and has not ended yet (the end month is the last one it counts in).
+export function isActive(item, month) {
+  const since = monthIndex(item.since);
+  const until = monthIndex(item.until);
+  return (since === null || since <= month) && (until === null || until >= month);
+}
+
+export function isEnded(item, month) {
+  const until = monthIndex(item.until);
+  return until !== null && until < month;
+}
+
+function sumMonthly(items, month) {
+  return (items || [])
+    .filter((item) => isActive(item, month))
+    .reduce((total, item) => total + toMonthly(item.amount, item.period), 0);
+}
+
 export function kwhPerMonth(power) {
   const watts = positive(power?.watts);
   const hours = Math.min(positive(power?.hoursPerDay), 24);
   return (watts / 1000) * hours * DAYS_PER_MONTH;
 }
 
+// The month the homelab started: the one entered, or else the earliest start
+// month of any service or cost. Null when nothing is dated.
+export function startMonth(state) {
+  const explicit = monthIndex(state.hardware?.since);
+  if (explicit !== null) return explicit;
+  const dated = [...(state.services || []), ...(state.others || [])]
+    .map((item) => monthIndex(item.since))
+    .filter((value) => value !== null);
+  return dated.length ? Math.min(...dated) : null;
+}
+
+// Money kept after `k` whole months since the start: each service counts only
+// for the months it was in use, each cost only for the months it was paid,
+// electricity for every month, and the whole hardware cost is paid upfront.
+// Without a start month there is no history, so today's numbers are used for
+// every month.
+export function makeTimeline(state, now = new Date()) {
+  const current = now.getFullYear() * 12 + now.getMonth();
+  const start = startMonth(state);
+  const hardwareCost = positive(state.hardware?.cost);
+  const electricity = kwhPerMonth(state.power) * positive(state.power?.pricePerKwh);
+
+  if (start === null) {
+    const rate = sumMonthly(state.services, current) - sumMonthly(state.others, current) - electricity;
+    return { start: null, current, at: (k) => k * rate - hardwareCost };
+  }
+
+  const span = (item, sign) => {
+    const since = monthIndex(item.since);
+    const until = monthIndex(item.until);
+    return {
+      from: Math.max(since ?? start, start) - start,
+      to: until === null ? Infinity : until - start + 1,
+      monthly: sign * toMonthly(item.amount, item.period),
+    };
+  };
+  const spans = [
+    ...(state.services || []).map((item) => span(item, 1)),
+    ...(state.others || []).map((item) => span(item, -1)),
+  ];
+
+  const at = (k) => spans.reduce(
+    (total, s) => total + s.monthly * Math.max(0, Math.min(k, s.to) - s.from),
+    -electricity * k - hardwareCost,
+  );
+  return { start, current, at };
+}
+
 export function calculate(state, now = new Date()) {
-  const gross = sumMonthly(state.services);
+  const month = now.getFullYear() * 12 + now.getMonth();
+  const gross = sumMonthly(state.services, month);
   const kwh = kwhPerMonth(state.power);
   const electricity = kwh * positive(state.power?.pricePerKwh);
-  const other = sumMonthly(state.others);
+  const other = sumMonthly(state.others, month);
   const running = electricity + other;
 
   const hardwareCost = positive(state.hardware?.cost);
@@ -44,6 +113,7 @@ export function calculate(state, now = new Date()) {
 
   const netBeforeHardware = gross - running;
   const net = netBeforeHardware - hardware;
+  const timeline = makeTimeline(state, now);
 
   return {
     gross,
@@ -56,51 +126,46 @@ export function calculate(state, now = new Date()) {
     netYearly: net * 12,
     netBeforeHardware,
     hardwareCost,
-    payback: payback(hardwareCost, netBeforeHardware, state.hardware?.since, now),
-    total: total(hardwareCost, netBeforeHardware, state.hardware?.since, now),
+    timeline,
+    payback: payback(hardwareCost, netBeforeHardware, timeline),
+    total: total(timeline),
   };
 }
 
-// Money kept so far: what the setup saved each month since it started, minus the
-// whole hardware cost. It assumes today's numbers held the whole time, and counts
-// whole months, like the break-even date does.
-export function cumulative(months, netBeforeHardware, hardwareCost) {
-  return months * netBeforeHardware - hardwareCost;
+function payback(hardwareCost, netBeforeHardware, { start, current, at }) {
+  if (hardwareCost <= 0) return { status: 'none', months: null, date: null };
+
+  if (start === null) {
+    if (netBeforeHardware <= 0) return { status: 'never', months: null, date: null };
+    const months = Math.max(1, Math.ceil(hardwareCost / netBeforeHardware - 1e-9));
+    return { status: 'pending', months, date: null };
+  }
+
+  for (let k = 1; k <= MAX_MONTHS; k++) {
+    if (at(k) >= -1e-9) {
+      const end = start + k;
+      return { status: current >= end ? 'reached' : 'pending', months: k, date: monthFromIndex(end) };
+    }
+  }
+  return { status: 'never', months: null, date: null };
 }
 
-function total(hardwareCost, netBeforeHardware, since, now) {
-  const start = monthIndex(since);
+function total({ start, current, at }) {
   if (start === null) return { status: 'unknown', months: null, amount: null };
-  const current = now.getFullYear() * 12 + now.getMonth();
   if (current < start) return { status: 'future', months: 0, amount: null };
   const months = current - start;
-  return { status: 'running', months, amount: cumulative(months, netBeforeHardware, hardwareCost) };
+  return { status: 'running', months, amount: at(months) };
 }
 
-export function projection(years, netBeforeHardware, hardwareCost) {
-  return cumulative(years * 12, netBeforeHardware, hardwareCost);
+// What will have been kept after `years` since the start.
+export function projection(years, timeline) {
+  return timeline.at(years * 12);
 }
 
-// Points of the cumulative curve, month 0 to `horizon`, for the chart.
+// How many months the chart shows: at least a year, a bit past today and past
+// the break-even.
 export function chartHorizon(result, elapsed) {
   const wanted = [12, Math.ceil((elapsed || 0) * 1.5)];
   if (result.payback.months) wanted.push(Math.ceil(result.payback.months * 1.25));
   return Math.min(120, Math.max(...wanted));
-}
-
-function payback(hardwareCost, netBeforeHardware, since, now) {
-  if (hardwareCost <= 0) return { status: 'none', months: null, date: null };
-  if (netBeforeHardware <= 0) return { status: 'never', months: null, date: null };
-
-  const months = Math.max(1, Math.ceil(hardwareCost / netBeforeHardware - 1e-9));
-  const start = monthIndex(since);
-  if (start === null) return { status: 'pending', months, date: null };
-
-  const end = start + months;
-  const current = now.getFullYear() * 12 + now.getMonth();
-  return {
-    status: current >= end ? 'reached' : 'pending',
-    months,
-    date: monthFromIndex(end),
-  };
 }

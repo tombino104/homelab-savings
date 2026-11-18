@@ -5,6 +5,17 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versio
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-11-18
+
+### Added
+- Each service and each other cost has its own start month and an optional end month. A new one starts in the month you add it.
+- Services and costs you no longer use are grouped at the bottom of their list, and a search field appears when the list gets long.
+
+### Changed
+- The total saved so far, the break-even date, the chart and the projections count each service and cost only for the months it was in use. Before, a service added later was counted as if it had always been there.
+- The page is split into tabs (Summary, Services, Costs, Settings), with the net per month and the total saved always visible at the top.
+- Rows are more compact: the description and the dates are in a details panel. Removing an item with a history asks first, since it also leaves the total saved.
+
 ## [0.3.0] - 2026-11-16
 
 ### Added

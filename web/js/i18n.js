@@ -61,6 +61,9 @@ export function applyStatic(root = document) {
   root.querySelectorAll('[data-i18n]').forEach((node) => {
     node.textContent = t(node.dataset.i18n);
   });
+  root.querySelectorAll('[data-i18n-placeholder]').forEach((node) => {
+    node.placeholder = t(node.dataset.i18nPlaceholder);
+  });
   root.querySelectorAll('[data-i18n-aria]').forEach((node) => {
     node.setAttribute('aria-label', t(node.dataset.i18nAria));
   });

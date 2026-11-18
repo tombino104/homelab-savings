@@ -28,6 +28,9 @@ const amount = (value, fallback = 0) => {
   return Number.isFinite(n) && n >= 0 ? Math.min(n, MAX_VALUE) : fallback;
 };
 
+const MONTH = /^\d{4}-(0[1-9]|1[0-2])$/;
+const month = (value) => (typeof value === 'string' && MONTH.test(value) ? value : '');
+
 const text = (value) => (typeof value === 'string' ? value.slice(0, MAX_NAME) : '');
 
 function items(list) {
@@ -39,6 +42,8 @@ function items(list) {
     note: typeof x.note === 'string' ? x.note.slice(0, MAX_NOTE) : '',
     amount: amount(x.amount),
     period: x.period === 'year' ? 'year' : 'month',
+    since: month(x.since),
+    until: month(x.until),
   }));
 }
 
@@ -60,7 +65,7 @@ export function normalize(raw) {
     hardware: {
       cost: amount(hardware.cost),
       months: amount(hardware.months, base.hardware.months),
-      since: /^\d{4}-(0[1-9]|1[0-2])$/.test(hardware.since) ? hardware.since : '',
+      since: month(hardware.since),
     },
   };
 }

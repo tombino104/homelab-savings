@@ -52,7 +52,7 @@ test('every catalog entry has a name in every language and a sane price', () => 
 
 test('every static label used in the page exists', () => {
   const html = readFileSync(new URL('../web/index.html', import.meta.url), 'utf8');
-  for (const [, key] of html.matchAll(/data-i18n(?:-aria)?="([^"]+)"/g)) {
+  for (const [, key] of html.matchAll(/data-i18n(?:-aria|-placeholder)?="([^"]+)"/g)) {
     assert.ok(en[key], key);
   }
 });

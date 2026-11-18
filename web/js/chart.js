@@ -1,5 +1,3 @@
-import { cumulative } from './calc.js';
-
 const NS = 'http://www.w3.org/2000/svg';
 const W = 320;
 const H = 170;
@@ -12,12 +10,12 @@ function svg(tag, attrs = {}, text) {
   return node;
 }
 
-// Draws the money kept over time: it starts at minus the hardware cost and
-// grows by the monthly savings. `elapsed` (months so far) splits the line into
+// Draws the money kept over time (`at(k)` after k months): it starts at minus
+// the hardware cost and grows by the savings of the services in use. `elapsed` (months so far) splits the line into
 // a solid part (the past) and a dashed one (the projection).
-export function drawChart(container, { netBeforeHardware, hardwareCost, elapsed, horizon, breakEven, label, text }) {
+export function drawChart(container, { at, elapsed, horizon, breakEven, label, text }) {
   const values = [];
-  for (let m = 0; m <= horizon; m++) values.push(cumulative(m, netBeforeHardware, hardwareCost));
+  for (let m = 0; m <= horizon; m++) values.push(at(m));
   const low = Math.min(0, ...values);
   const high = Math.max(0, ...values);
   const span = high - low || 1;

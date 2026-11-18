@@ -14,8 +14,8 @@ test('a saved state survives normalisation unchanged', () => {
   const saved = {
     v: 1,
     currency: 'USD',
-    services: [{ id: 'a', ref: 'nextcloud', name: 'Files', note: 'Family photos and documents', amount: 10, period: 'year' }],
-    others: [{ id: 'b', ref: '', name: 'Domain', note: '', amount: 12, period: 'year' }],
+    services: [{ id: 'a', ref: 'nextcloud', name: 'Files', note: 'Family photos and documents', amount: 10, period: 'year', since: '2026-03', until: '' }],
+    others: [{ id: 'b', ref: '', name: 'Domain', note: '', amount: 12, period: 'year', since: '', until: '2027-01' }],
     power: { watts: 15, hoursPerDay: 12, pricePerKwh: 0.3 },
     hardware: { cost: 250, months: 24, since: '2026-02' },
   };
@@ -62,4 +62,11 @@ test('notes are optional and capped', () => {
   assert.equal(state.services[0].note, '');
   assert.equal(state.services[1].note.length, 200);
   assert.equal(state.services[2].note, '');
+});
+
+test('items keep valid start and end months and drop invalid ones', async () => {
+  const { normalize } = await import('../web/js/state.js');
+  const state = normalize({ services: [{ name: 'a', since: '2026-03', until: '2026-13' }] });
+  assert.equal(state.services[0].since, '2026-03');
+  assert.equal(state.services[0].until, '');
 });
