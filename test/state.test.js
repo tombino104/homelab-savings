@@ -14,10 +14,10 @@ test('a saved state survives normalisation unchanged', () => {
   const saved = {
     v: 1,
     currency: 'USD',
-    services: [{ id: 'a', ref: 'nextcloud', name: 'Files', note: 'Family photos and documents', amount: 10, period: 'year', since: '2026-03', until: '' }],
-    others: [{ id: 'b', ref: '', name: 'Domain', note: '', amount: 12, period: 'year', since: '', until: '2027-01' }],
-    power: { watts: 15, hoursPerDay: 12, pricePerKwh: 0.3 },
-    hardware: { cost: 250, months: 24, since: '2026-02' },
+    services: [{ id: 'a', ref: 'nextcloud', name: 'Files', note: 'Family photos and documents', amount: 10, period: 'year', since: '2026-03', until: '', changes: [{ month: '2026-09', amount: 12 }] }],
+    others: [{ id: 'b', ref: '', name: 'Domain', note: '', amount: 12, period: 'year', since: '', until: '2027-01', changes: [] }],
+    power: { watts: 15, hoursPerDay: 12, pricePerKwh: 0.3, changes: [{ month: '2026-07', amount: 0.28 }] },
+    hardware: { months: 24, since: '2026-02', purchases: [{ id: 'p', name: 'Mini PC', note: '', cost: 250, month: '2026-02' }] },
   };
   assert.deepEqual(normalize(saved), saved);
 });
@@ -31,7 +31,7 @@ test('negative and non-numeric amounts are replaced', () => {
   const state = normalize({
     services: [{ name: 'x', amount: -4, period: 'month' }, { name: 'y', amount: 'abc', period: 'week' }],
     power: { watts: -1, hoursPerDay: 99, pricePerKwh: 'nope' },
-    hardware: { cost: -5, months: 'x', since: 'soon' },
+    hardware: { months: 'x', since: 'soon', purchases: [{ cost: -5, month: 'soon' }] },
   });
   assert.equal(state.services[0].amount, 0);
   assert.equal(state.services[1].amount, 0);
@@ -39,7 +39,8 @@ test('negative and non-numeric amounts are replaced', () => {
   assert.equal(state.power.watts, defaultState().power.watts);
   assert.equal(state.power.hoursPerDay, 24);
   assert.equal(state.power.pricePerKwh, defaultState().power.pricePerKwh);
-  assert.equal(state.hardware.cost, 0);
+  assert.equal(state.hardware.purchases[0].cost, 0);
+  assert.equal(state.hardware.purchases[0].month, '');
   assert.equal(state.hardware.months, defaultState().hardware.months);
   assert.equal(state.hardware.since, '');
 });
@@ -69,4 +70,18 @@ test('items keep valid start and end months and drop invalid ones', async () => 
   const state = normalize({ services: [{ name: 'a', since: '2026-03', until: '2026-13' }] });
   assert.equal(state.services[0].since, '2026-03');
   assert.equal(state.services[0].until, '');
+});
+
+test('a single hardware cost from before 0.5.0 becomes one purchase in the start month', () => {
+  const state = normalize({ hardware: { cost: 300, months: 36, since: '2026-01' } });
+  assert.equal(state.hardware.purchases.length, 1);
+  assert.equal(state.hardware.purchases[0].cost, 300);
+  assert.equal(state.hardware.purchases[0].month, '2026-01');
+  assert.equal('cost' in state.hardware, false);
+  assert.deepEqual(normalize({ hardware: { cost: 0 } }).hardware.purchases, []);
+});
+
+test('price changes without a valid month are dropped', () => {
+  const state = normalize({ services: [{ name: 'a', changes: [{ month: 'x', amount: 3 }, { month: '2026-05', amount: -1 }, 'no'] }] });
+  assert.deepEqual(state.services[0].changes, [{ month: '2026-05', amount: 0 }]);
 });

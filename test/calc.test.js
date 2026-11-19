@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { DAYS_PER_MONTH, calculate, chartHorizon, kwhPerMonth, projection, monthFromIndex, monthIndex, toMonthly } from '../web/js/calc.js';
+import { DAYS_PER_MONTH, calculate, chartHorizon, kwhPerMonth, priceAt, priceEntry, projection, monthFromIndex, monthIndex, toMonthly } from '../web/js/calc.js';
 import { defaultState } from '../web/js/state.js';
 
 const close = (actual, expected, epsilon = 1e-9) =>
@@ -300,4 +300,110 @@ test('the chart covers at least a year and the break-even', () => {
   }), NOW);
   assert.equal(chartHorizon(result, 0), 120);
   assert.equal(chartHorizon(calculate(scenario(), NOW), 0), 12);
+});
+
+const purchase = (cost, month = '') => ({ cost, month });
+
+test('each hardware purchase is paid in its own month', () => {
+  const result = calculate(scenario({
+    services: [{ amount: 50, period: 'month' }],
+    hardware: { months: 36, since: '2026-01', purchases: [purchase(200, '2026-01'), purchase(100, '2026-04')] },
+  }), NOW);
+  // Five months of savings, both purchases paid.
+  close(result.total.amount, 250 - 300);
+  assert.equal(result.hardwareCost, 300);
+  // Before April only the first one was paid.
+  close(result.timeline.at(2), 100 - 200);
+  close(result.timeline.at(3), 150 - 300);
+});
+
+test('a purchase can push the total below zero again and move the break-even', () => {
+  const result = calculate(scenario({
+    services: [{ amount: 50, period: 'month' }],
+    hardware: { months: 36, since: '2026-01', purchases: [purchase(100, '2026-01'), purchase(150, '2026-04')] },
+  }), NOW);
+  // 50 a month covers the first after 2 months, then April adds 150: back above zero after 5 months.
+  assert.deepEqual(result.payback, { status: 'reached', months: 5, date: '2026-06' });
+});
+
+test('the monthly hardware figure spreads each purchase only over the months after it', () => {
+  const result = calculate(scenario({
+    hardware: { months: 12, since: '2025-01', purchases: [purchase(120, '2025-01'), purchase(240, '2026-03')] },
+  }), NOW);
+  // The first one finished spreading in December 2025.
+  close(result.hardware, 20);
+});
+
+test('a purchase in the future is not paid yet', () => {
+  const result = calculate(scenario({
+    services: [{ amount: 50, period: 'month' }],
+    hardware: { months: 36, since: '2026-01', purchases: [purchase(100, '2026-01'), purchase(500, '2026-09')] },
+  }), NOW);
+  close(result.total.amount, 250 - 100);
+});
+
+test('the old single hardware cost still works', () => {
+  const result = calculate(scenario({
+    services: [{ amount: 50, period: 'month' }],
+    hardware: { cost: 300, months: 36, since: '2026-01' },
+  }), NOW);
+  close(result.total.amount, 250 - 300);
+});
+
+test('a price change applies from its month on', () => {
+  const item = { amount: 2, period: 'month', changes: [{ month: '2026-04', amount: 3 }, { month: '2026-02', amount: 2.5 }] };
+  const jan = 2026 * 12;
+  assert.equal(priceAt(item, jan), 2);
+  assert.equal(priceAt(item, jan + 1), 2.5);
+  assert.equal(priceAt(item, jan + 3), 3);
+  assert.equal(priceEntry(item, jan + 5).target, item.changes[0]);
+  assert.equal(priceEntry(item, jan).target, item);
+});
+
+test('the total uses the price of each month', () => {
+  const result = calculate(scenario({
+    services: [{ amount: 10, period: 'month', changes: [{ month: '2026-04', amount: 13 }] }],
+    hardware: { months: 36, since: '2026-01', purchases: [] },
+  }), NOW);
+  // January to March at 10, April and May at 13; now 13 per month.
+  close(result.total.amount, 3 * 10 + 2 * 13);
+  close(result.gross, 13);
+});
+
+test('a yearly price change keeps the yearly period', () => {
+  const result = calculate(scenario({
+    services: [{ amount: 120, period: 'year', changes: [{ month: '2026-03', amount: 240 }] }],
+    hardware: { months: 36, since: '2026-01', purchases: [] },
+  }), NOW);
+  close(result.total.amount, 2 * 10 + 3 * 20);
+});
+
+test('the price per kWh can change too', () => {
+  const power = { watts: 1000, hoursPerDay: 24, pricePerKwh: 0.2, changes: [{ month: '2026-03', amount: 0.3 }] };
+  const result = calculate(scenario({ power, hardware: { months: 36, since: '2026-01', purchases: [] } }), NOW);
+  const kwh = kwhPerMonth(power);
+  close(result.electricity, kwh * 0.3);
+  close(result.total.amount, -(2 * kwh * 0.2 + 3 * kwh * 0.3), 1e-6);
+});
+
+test('what each service saved so far, largest first', () => {
+  const result = calculate(scenario({
+    services: [
+      { id: 'a', name: 'A', amount: 10, period: 'month' },
+      { id: 'b', name: 'B', amount: 30, period: 'month', since: '2026-04' },
+      { id: 'c', name: 'C', amount: 5, period: 'month', until: '2026-01' },
+      { id: 'd', name: 'D', amount: 50, period: 'month', since: '2026-09' },
+    ],
+    hardware: { months: 36, since: '2026-01', purchases: [] },
+  }), NOW);
+  assert.equal(result.contributions.perMonth, false);
+  assert.deepEqual(result.contributions.list.map((e) => [e.id, e.amount]), [['b', 60], ['a', 50], ['c', 5]]);
+});
+
+test('without a start month the ranking is per month now', () => {
+  const result = calculate(scenario({
+    services: [{ id: 'a', amount: 10, period: 'month' }, { id: 'b', amount: 120, period: 'year' }],
+  }), NOW);
+  assert.equal(result.contributions.perMonth, true);
+  assert.deepEqual(result.contributions.list.map((e) => [e.id, e.amount]), [['a', 10], ['b', 10]]);
 });

@@ -49,12 +49,21 @@
         </div>
       </section>
 
+      <div class="stack">
       <section class="card" id="over-time">
         <h2 data-i18n="chart.title">Over time</h2>
         <p class="muted" data-i18n="chart.hint">Money kept since the start, after paying for the hardware. Each service counts from the month you started using it.</p>
         <div id="chart" class="chart"></div>
         <dl class="projection" id="projection"></dl>
       </section>
+
+      <section class="card" id="ranking">
+        <h2 data-i18n="ranking.title">What saved the most</h2>
+        <p class="muted" id="ranking-hint"></p>
+        <ol class="ranking" id="ranking-list"></ol>
+        <p class="muted" id="ranking-more"></p>
+      </section>
+      </div>
     </div>
 
     <div class="panel" role="tabpanel" data-panel="services" hidden>
@@ -82,22 +91,32 @@
           <label><span data-i18n="power.hours">Hours per day</span>
             <input type="number" min="0" max="24" step="any" inputmode="decimal" data-bind="power.hoursPerDay"></label>
           <label><span data-i18n="power.price">Price per kWh</span>
-            <input type="number" min="0" step="any" inputmode="decimal" data-bind="power.pricePerKwh"></label>
+            <input type="number" min="0" step="any" inputmode="decimal" id="kwh-price"></label>
         </div>
         <p class="muted" id="power-note"></p>
+        <details class="changes-group" id="power-changes-group">
+          <summary id="power-changes-label"></summary>
+          <p class="muted" data-i18n="power.changesHint">If your price per kWh changed, add the month and the new price. The field above is always today's price.</p>
+          <div id="power-changes"></div>
+        </details>
       </section>
 
       <section class="card">
-        <h2 data-i18n="hardware.title">Hardware</h2>
+        <div class="head">
+          <h2 data-i18n="hardware.title">Hardware</h2>
+          <p class="muted" id="hardware-summary"></p>
+        </div>
         <div class="fields">
-          <label><span data-i18n="hardware.cost">What it cost</span>
-            <input type="number" min="0" step="any" inputmode="decimal" data-bind="hardware.cost"></label>
-          <label><span data-i18n="hardware.months">Spread over (months)</span>
-            <input type="number" min="1" step="1" inputmode="numeric" data-bind="hardware.months"></label>
           <label><span data-i18n="hardware.since">Running since (optional)</span>
             <input type="month" data-bind="hardware.since"></label>
+          <label><span data-i18n="hardware.months">Spread over (months)</span>
+            <input type="number" min="1" step="1" inputmode="numeric" data-bind="hardware.months"></label>
         </div>
-        <p class="muted" data-i18n="hardware.hint">The month you started is used for the break-even date and for the total saved so far.</p>
+        <p class="muted" data-i18n="hardware.hint">Each purchase counts in full in its month for the total saved so far, and is spread over the months above for the monthly figure.</p>
+        <div class="actions">
+          <button type="button" id="add-purchase" data-i18n="hardware.add">Add a purchase</button>
+        </div>
+        <div id="purchases" class="list"></div>
       </section>
 
       <section class="card">

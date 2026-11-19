@@ -7,6 +7,7 @@ const MAX_ITEMS = 100;
 const MAX_NAME = 80;
 const MAX_NOTE = 200;
 const MAX_VALUE = 1e9;
+const MAX_CHANGES = 50;
 
 export function defaultState() {
   return {
@@ -14,8 +15,8 @@ export function defaultState() {
     currency: 'EUR',
     services: [],
     others: [],
-    power: { watts: 30, hoursPerDay: 24, pricePerKwh: 0.25 },
-    hardware: { cost: 0, months: 36, since: '' },
+    power: { watts: 30, hoursPerDay: 24, pricePerKwh: 0.25, changes: [] },
+    hardware: { months: 36, since: '', purchases: [] },
   };
 }
 
@@ -33,6 +34,28 @@ const month = (value) => (typeof value === 'string' && MONTH.test(value) ? value
 
 const text = (value) => (typeof value === 'string' ? value.slice(0, MAX_NAME) : '');
 
+// Price changes: from `month` on, the price is `amount` (same billing period).
+function changes(list) {
+  if (!Array.isArray(list)) return [];
+  return list.slice(0, MAX_CHANGES).filter((x) => x && typeof x === 'object' && month(x.month))
+    .map((x) => ({ month: x.month, amount: amount(x.amount) }));
+}
+
+function purchases(hardware) {
+  if (Array.isArray(hardware.purchases)) {
+    return hardware.purchases.slice(0, MAX_ITEMS).filter((x) => x && typeof x === 'object').map((x) => ({
+      id: text(x.id) || uid(),
+      name: text(x.name),
+      note: typeof x.note === 'string' ? x.note.slice(0, MAX_NOTE) : '',
+      cost: amount(x.cost),
+      month: month(x.month),
+    }));
+  }
+  // Before 0.5.0 there was a single hardware cost, bought in the start month.
+  const cost = amount(hardware.cost);
+  return cost > 0 ? [{ id: uid(), name: '', note: '', cost, month: month(hardware.since) }] : [];
+}
+
 function items(list) {
   if (!Array.isArray(list)) return [];
   return list.slice(0, MAX_ITEMS).filter((x) => x && typeof x === 'object').map((x) => ({
@@ -44,6 +67,7 @@ function items(list) {
     period: x.period === 'year' ? 'year' : 'month',
     since: month(x.since),
     until: month(x.until),
+    changes: changes(x.changes),
   }));
 }
 
@@ -61,11 +85,12 @@ export function normalize(raw) {
       watts: amount(power.watts, base.power.watts),
       hoursPerDay: Math.min(amount(power.hoursPerDay, base.power.hoursPerDay), 24),
       pricePerKwh: amount(power.pricePerKwh, base.power.pricePerKwh),
+      changes: changes(power.changes),
     },
     hardware: {
-      cost: amount(hardware.cost),
       months: amount(hardware.months, base.hardware.months),
       since: month(hardware.since),
+      purchases: purchases(hardware),
     },
   };
 }

@@ -1,4 +1,6 @@
-import { calculate, chartHorizon, currentMonth, isActive, isEnded, monthIndex, projection, toMonthly } from './calc.js';
+import {
+  calculate, chartHorizon, currentMonth, isActive, isEnded, monthIndex, priceAt, priceEntry, projection, toMonthly,
+} from './calc.js';
 import { drawChart } from './chart.js';
 import { CATALOG } from './catalog.js';
 import { CURRENCIES, defaultState, normalize, uid } from './state.js';
@@ -107,6 +109,8 @@ function badges(item) {
   if (item.note) parts.push(item.note);
   if (item.since) parts.push(t('badge.since', { date: i18n.monthLabel(item.since) }));
   if (item.until) parts.push(t('badge.until', { date: i18n.monthLabel(item.until) }));
+  const latest = (item.changes || []).map((c) => c.month).sort().pop();
+  if (latest) parts.push(t('badge.price', { date: i18n.monthLabel(latest) }));
   return parts.join(' · ');
 }
 
@@ -121,6 +125,87 @@ function monthField(item, key, label, hint, node) {
     changed();
   };
   return el('label', {}, el('span', {}, label), input, el('small', { className: 'muted' }, hint));
+}
+
+// Several inputs can show the same price: the row shows today's price, the
+// details show each price over time. Editing one refreshes the others.
+function priceGroup() {
+  const inputs = [];
+  const sync = () => {
+    for (const { input, get } of inputs) {
+      if (document.activeElement !== input) input.value = get() || '';
+    }
+  };
+  const bind = (input, get, set) => {
+    input.value = get() || '';
+    input.oninput = () => {
+      set(Math.max(0, parseFloat(input.value) || 0));
+      sync();
+      changed();
+    };
+    inputs.push({ input, get });
+    return input;
+  };
+  const input = (get, set, label) => bind(el('input', {
+    type: 'number', min: '0', step: 'any', inputMode: 'decimal', placeholder: '0', 'aria-label': label,
+  }), get, set);
+  return { bind, input, sync };
+}
+
+// Today's price of `owner` (a service, a cost or the electricity), wherever it
+// is kept: the starting price or the latest change.
+function nowPrice(owner, key = 'amount') {
+  return {
+    get: () => {
+      const { target, key: field } = priceEntry(owner, nowIndex(), key);
+      return target[field];
+    },
+    set: (value) => {
+      const { target, key: field } = priceEntry(owner, nowIndex(), key);
+      target[field] = value;
+    },
+  };
+}
+
+function priceChanges(owner, key, group, onListChange, onMonthChange) {
+  owner.changes ||= [];
+  owner.changes.sort((a, b) => a.month.localeCompare(b.month));
+  const rows = [el('div', { className: 'change' },
+    el('span', { className: 'muted' }, t('price.start')),
+    group.input(() => owner[key], (value) => { owner[key] = value; }, t('price.start')),
+    el('span'))];
+  for (const change of owner.changes) {
+    const month = el('input', { type: 'month', value: change.month, 'aria-label': t('price.from') });
+    month.oninput = () => {
+      if (!/^\d{4}-\d{2}$/.test(month.value)) return;
+      change.month = month.value;
+      group.sync();
+      onMonthChange?.();
+      changed();
+    };
+    const remove = el('button', {
+      type: 'button', className: 'icon', title: t('price.remove'), 'aria-label': t('price.remove'),
+    }, '×');
+    remove.onclick = () => {
+      owner.changes = owner.changes.filter((c) => c !== change);
+      onListChange();
+      changed();
+    };
+    rows.push(el('div', { className: 'change' },
+      month,
+      group.input(() => change.amount, (value) => { change.amount = value; }, t('field.price')),
+      remove));
+  }
+  const add = el('button', { type: 'button' }, t('price.add'));
+  add.onclick = () => {
+    const month = currentMonth();
+    if (!owner.changes.some((c) => c.month === month)) {
+      owner.changes.push({ month, amount: priceAt(owner, nowIndex(), key) });
+    }
+    onListChange();
+    changed();
+  };
+  return el('div', { className: 'changes' }, ...rows, el('div', { className: 'actions' }, add));
 }
 
 function hasHistory(item) {
@@ -138,14 +223,9 @@ function row(kind, item) {
     item.name = name.value;
     saver.schedule();
   };
-  const price = el('input', {
-    type: 'number', min: '0', step: 'any', inputMode: 'decimal',
-    value: item.amount || '', placeholder: '0', 'aria-label': t('field.price'),
-  });
-  price.oninput = () => {
-    item.amount = Math.max(0, parseFloat(price.value) || 0);
-    changed();
-  };
+  const group = priceGroup();
+  const today = nowPrice(item);
+  const price = group.input(today.get, today.set, t('field.price'));
   const toggle = el('button', {
     type: 'button', className: 'icon toggle', title: t('action.details'),
     'aria-label': t('action.details'), 'aria-expanded': String(expanded),
@@ -181,6 +261,12 @@ function row(kind, item) {
       el('label', { className: 'wide' }, el('span', {}, t('field.note')), note),
       monthField(item, 'since', t('field.since'), t('field.sinceHint'), node),
       monthField(item, 'until', t('field.until'), t('field.untilHint'), node),
+      el('div', { className: 'wide price-history' },
+        el('span', { className: 'label' }, t('price.title')),
+        el('small', { className: 'muted' }, t('price.hint')),
+        priceChanges(item, 'amount', group, renderLists, () => {
+          node.querySelector('.meta').textContent = badges(item);
+        })),
       el('div', { className: 'wide end' }, remove)));
   }
   return node;
@@ -226,7 +312,73 @@ function renderListSummary(kind) {
 function renderLists() {
   renderList('services');
   renderList('others');
+  renderPurchases();
   renderCatalog();
+}
+
+/* Hardware purchases */
+
+function purchaseRow(purchase) {
+  const name = el('input', {
+    type: 'text', className: 'name', value: purchase.name, maxLength: 80,
+    placeholder: t('purchase.name'), 'aria-label': t('purchase.name'),
+  });
+  name.oninput = () => {
+    purchase.name = name.value;
+    saver.schedule();
+  };
+  const cost = el('input', {
+    type: 'number', min: '0', step: 'any', inputMode: 'decimal',
+    value: purchase.cost || '', placeholder: '0', 'aria-label': t('purchase.cost'),
+  });
+  cost.oninput = () => {
+    purchase.cost = Math.max(0, parseFloat(cost.value) || 0);
+    changed();
+  };
+  const month = el('input', { type: 'month', value: purchase.month || '', 'aria-label': t('purchase.month') });
+  month.oninput = () => {
+    purchase.month = /^\d{4}-\d{2}$/.test(month.value) ? month.value : '';
+    changed();
+  };
+  const remove = el('button', {
+    type: 'button', className: 'icon', title: t('action.remove'), 'aria-label': t('action.remove'),
+  }, '×');
+  remove.onclick = () => {
+    state.hardware.purchases = state.hardware.purchases.filter((p) => p !== purchase);
+    renderPurchases();
+    changed();
+  };
+  return el('div', { className: 'row purchase' }, el('div', { className: 'title' }, name), cost, month, remove);
+}
+
+function renderPurchases() {
+  const { purchases } = state.hardware;
+  $('#purchases').replaceChildren(purchases.length
+    ? el('div', { className: 'rows' }, ...purchases.map(purchaseRow))
+    : el('p', { className: 'empty muted' }, t('hardware.empty')));
+  renderPurchaseSummary();
+}
+
+function renderPurchaseSummary() {
+  const { purchases } = state.hardware;
+  const total = purchases.reduce((sum, p) => sum + (p.cost || 0), 0);
+  $('#hardware-summary').textContent = purchases.length
+    ? i18n.plural('hardware.summary', purchases.length, { amount: money(total) })
+    : '';
+}
+
+/* Electricity price */
+
+function renderPower() {
+  const group = priceGroup();
+  const today = nowPrice(state.power, 'pricePerKwh');
+  group.bind($('#kwh-price'), today.get, today.set);
+  const refresh = () => {
+    renderPower();
+    $('#power-changes-group').open = true;
+  };
+  $('#power-changes').replaceChildren(priceChanges(state.power, 'pricePerKwh', group, refresh));
+  $('#power-changes-label').textContent = t('power.changes', { n: state.power.changes.length });
 }
 
 function renderCatalog() {
@@ -269,6 +421,30 @@ function render() {
   renderOverTime(result);
   renderListSummary('services');
   renderListSummary('others');
+  renderPurchaseSummary();
+  renderRanking(result.contributions);
+}
+
+function renderRanking({ perMonth, list }) {
+  const card = $('#ranking');
+  card.hidden = !list.length;
+  if (!list.length) return;
+  $('#ranking-hint').textContent = t(perMonth ? 'ranking.hintMonth' : 'ranking.hint');
+  const top = list.slice(0, 6);
+  const max = top[0].amount;
+  const label = (amount) => (perMonth ? t('ranking.perMonth', { amount: money(amount) }) : money(amount));
+  $('#ranking-list').replaceChildren(...top.map((entry) => {
+    const fill = el('span', { className: 'fill' });
+    fill.style.width = `${Math.max(2, (entry.amount / max) * 100)}%`;
+    return el('li', {},
+      el('span', { className: 'r-name' }, entry.name || t('ranking.unnamed')),
+      el('span', { className: 'r-amount' }, label(entry.amount)),
+      el('span', { className: 'bar' }, fill));
+  }));
+  const rest = list.slice(top.length);
+  $('#ranking-more').textContent = rest.length
+    ? i18n.plural('ranking.more', rest.length, { amount: label(rest.reduce((sum, e) => sum + e.amount, 0)) })
+    : '';
 }
 
 function renderTotal({ total }) {
@@ -339,6 +515,7 @@ async function applyLanguage(code) {
   renderLanguages();
   renderCurrencies();
   renderLists();
+  renderPower();
   render();
 }
 
@@ -379,6 +556,7 @@ function wireBackup() {
     bindInputs();
     renderCurrencies();
     renderLists();
+    renderPower();
     changed();
     backupStatus(t('backup.restored'));
   };
@@ -396,6 +574,7 @@ function newItem(entry) {
     period: 'month',
     since: currentMonth(),
     until: '',
+    changes: [],
   };
 }
 
@@ -428,6 +607,12 @@ function wireActions() {
     renderLists();
     changed();
     focusLast('others');
+  };
+  $('#add-purchase').onclick = () => {
+    state.hardware.purchases.push({ id: uid(), name: '', note: '', cost: 0, month: currentMonth() });
+    renderPurchases();
+    changed();
+    [...document.querySelectorAll('#purchases .name')].pop()?.focus();
   };
   $('#services-search').oninput = (event) => {
     filter = event.target.value;

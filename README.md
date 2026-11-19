@@ -18,15 +18,17 @@ One small container, no accounts, no cloud, no tracking.
 | | |
 | --- | --- |
 | ![Light theme on a computer](docs/screenshots/home.png) | ![Dark theme on a computer](docs/screenshots/home-dark.png) |
-| ![The list of services, each counted from the month it was added](docs/screenshots/services.png) | ![On a phone](docs/screenshots/phone.png) |
+| ![The list of services, each counted from the month it was added](docs/screenshots/services.png) | ![Electricity, hardware purchases and other costs](docs/screenshots/costs.png) |
+
+<p align="center"><img src="docs/screenshots/phone.png" width="260" alt="On a phone" /></p>
 
 *Made-up example numbers.*
 
 ## What it does
 
 - You list the services you self-host and what their cloud equivalent would cost (monthly or yearly), and from which month (a new one starts in the month you add it) and, if you stopped, until which month. A small catalog of common services comes with rough example prices: they are only a starting point, edit them.
-- You enter the electricity (watts, hours per day, price per kWh), what the hardware cost and over how many months to spread it, and any other cost (domain, VPN, a faster internet plan...).
-- You get the net result per month and per year, the breakdown, the month the hardware pays for itself, how much you have saved so far (hardware included), a chart of it over time and what it will be after 1, 3 and 5 years.
+- You enter the electricity (watts, hours per day, price per kWh), each piece of hardware you bought and when, and any other cost (domain, VPN, a faster internet plan...). Any price can change from a given month: the past keeps the old one.
+- You get the net result per month and per year, the breakdown, the month the hardware pays for itself, how much you have saved so far (hardware included), a chart of it over time, what it will be after 1, 3 and 5 years, and which services saved the most.
 - You can download your numbers as a JSON backup and restore them later.
 
 It is a calculator, not a score: no goals, no colours for good or bad, no notifications.
@@ -54,19 +56,20 @@ The app is in the community store [tombino104-store](https://github.com/tombino1
 ```
 gross savings     = sum of the services (yearly prices divided by 12)
 electricity       = watts / 1000 x hours per day x 30.4375 x price per kWh
-hardware          = cost / months it is spread over
+hardware          = each purchase / months it is spread over, for the months after it was made
 other costs       = sum of the other costs (yearly prices divided by 12)
 
 net per month     = gross savings - electricity - hardware - other costs
 net per year      = net per month x 12
 
 break-even        = hardware cost / (gross savings - electricity - other costs), rounded up to whole months
-saved so far      = for each service, its monthly price x the months it was in use
-                    - for each other cost, its monthly price x the months it was paid
-                    - electricity x months since the start - hardware cost
+saved so far      = for each service, its price in each month it was in use
+                    - for each other cost, its price in each month it was paid
+                    - electricity in each month since the start
+                    - every hardware purchase made so far
 ```
 
-The break-even date is the month you started plus those months; once a start month is set, it is the first month the total saved so far reaches zero, following when each service was added. The totals count whole months and use today's prices for the whole time. If the running costs are at least as high as the savings, there is no break-even. Amounts are never converted between currencies.
+The break-even date is the month you started plus those months; once a start month is set, it is the first month the total saved so far reaches zero, following when each service was added. The totals count whole months; a price change applies from its month on. If the running costs are at least as high as the savings, there is no break-even. Amounts are never converted between currencies.
 
 ## Develop
 

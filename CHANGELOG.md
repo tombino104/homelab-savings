@@ -5,6 +5,17 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versio
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-11-19
+
+### Added
+- Hardware is a list of purchases, each with its cost and month: the server, a disk added later, a UPS... Each one is paid in full in its month for the total saved so far, so a later purchase shows as a dip in the chart and can move the break-even.
+- Prices over time: a service, a cost or the price per kWh can change from a given month. The total saved so far uses the price of each month, and the price in the row is always today's.
+- What saved the most: in the summary, each service ranked by how much it has saved so far.
+
+### Changed
+- A single hardware cost saved by an earlier version becomes one purchase in the start month.
+- The monthly hardware figure spreads each purchase over the months after it was made, so a purchase stops counting there once it is paid off.
+
 ## [0.4.0] - 2026-11-18
 
 ### Added
